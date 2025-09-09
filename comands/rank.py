@@ -4,7 +4,7 @@ from discord.ext import commands
 import aiohttp
 
 THUMBNAIL = "https://cdn.discordapp.com/attachments/1409248231463981159/1410103092703395850/1756265132713.png"
-FOOTER_ICON = "https://cdn.discordapp.com/attachments/1409248231463981159/1409249440220577832/1756061531120.png"
+FOOTER_ICON = "https://cdn.discordapp.com/attachments/1409248231463981159/1414731583218520145/5825a5d4609bac3459e976fa6b26a7a3.png"
 
 BROP_NAME = "BROP Enterprises"
 
@@ -35,8 +35,9 @@ API_ENDPOINTS = {
     },
 }
 
+
 class Rank(commands.Cog):
-    def _init_(self, bot):
+    def __init__(self, bot):
         self.bot = bot
 
     async def fetch_data(self, url: str):
@@ -81,7 +82,7 @@ class Rank(commands.Cog):
             color=discord.Color.green()
         )
         embed.set_thumbnail(url=THUMBNAIL)
-        embed.set_footer(text="Feito por !  shotz", icon_url=FOOTER_ICON)
+        embed.set_footer(text="Feito por !  zenitsu", icon_url=FOOTER_ICON)
 
         if rank_type == "alliance":
             brop = next((a for a in data if a["name"].lower() == BROP_NAME.lower()), None)
@@ -106,7 +107,7 @@ class Rank(commands.Cog):
         try:
             data = await self.fetch_data(url)
         except Exception as e:
-            await interaction.response.send_message(f"⚠️ Erro interno ao buscar o rank: {e}")
+            await interaction.response.edit_message(content=f"⚠️ Erro interno ao buscar o rank: `{e}`")
             return
 
         max_pages = 5
@@ -117,33 +118,26 @@ class Rank(commands.Cog):
 
         async def prev_callback(ip: discord.Interaction):
             if ip.user.id != interaction.user.id:
-                await ip.response.send_message("❌ Apenas quem enviou o comando pode usar estes botões.")
+                await ip.response.send_message("❌ Apenas quem enviou o comando pode usar estes botões.", ephemeral=True)
                 return
             nonlocal page, embed_rank
-            if page > 0:
-                page -= 1
-            else:
-                page = max_pages - 1
+            page = page - 1 if page > 0 else max_pages - 1
             embed_rank = self.format_rank_page(data, page, rank_type, periodo)
             await ip.response.edit_message(embed=embed_rank, view=buttons)
 
         async def next_callback(ip: discord.Interaction):
             if ip.user.id != interaction.user.id:
-                await ip.response.send_message("❌ Apenas quem enviou o comando pode usar estes botões.")
+                await ip.response.send_message("❌ Apenas quem enviou o comando pode usar estes botões.", ephemeral=True)
                 return
             nonlocal page, embed_rank
-            if page < max_pages - 1:
-                page += 1
-            else:
-                page = 0
+            page = page + 1 if page < max_pages - 1 else 0
             embed_rank = self.format_rank_page(data, page, rank_type, periodo)
             await ip.response.edit_message(embed=embed_rank, view=buttons)
 
         async def back_callback(ip: discord.Interaction):
             if ip.user.id != interaction.user.id:
-                await ip.response.send_message("❌ Apenas quem enviou o comando pode usar este botão.")
+                await ip.response.send_message("❌ Apenas quem enviou o comando pode usar este botão.", ephemeral=True)
                 return
-            # Voltar para escolha de período
             await self.open_period_menu(ip, rank_type)
 
         prev_button = discord.ui.Button(label="⬅️", style=discord.ButtonStyle.secondary)
@@ -158,7 +152,7 @@ class Rank(commands.Cog):
         buttons.add_item(next_button)
         buttons.add_item(back_button)
 
-        await interaction.response.send_message(embed=embed_rank, view=buttons)
+        await interaction.response.edit_message(embed=embed_rank, view=buttons)
 
     async def open_period_menu(self, interaction: discord.Interaction, rank_type: str):
         embed2 = discord.Embed(
@@ -167,24 +161,22 @@ class Rank(commands.Cog):
             color=discord.Color.green()
         )
         embed2.set_thumbnail(url=THUMBNAIL)
-        embed2.set_footer(text="Feito por !  shotz", icon_url=FOOTER_ICON)
+        embed2.set_footer(text="Feito por !  zenitsu", icon_url=FOOTER_ICON)
 
         view2 = discord.ui.View()
 
         for periodo in ["Hoje", "Semana", "Mês", "Geral"]:
             btn = discord.ui.Button(label=periodo, style=discord.ButtonStyle.success)
 
-            async def callback_factory(p=periodo):
-                async def callback(i2: discord.Interaction):
-                    await self.send_rank(i2, rank_type, p)
-                return callback
+            async def callback(i2: discord.Interaction, p=periodo):
+                await self.send_rank(i2, rank_type, p)
 
-            btn.callback = await callback_factory(periodo)
+            btn.callback = callback
             view2.add_item(btn)
 
         async def back_callback(i: discord.Interaction):
             if i.user.id != interaction.user.id:
-                await i.response.send_message("❌ Apenas quem enviou o comando pode usar este botão.")
+                await i.response.send_message("❌ Apenas quem enviou o comando pode usar este botão.", ephemeral=True)
                 return
             await self.rank(i)
 
@@ -202,15 +194,20 @@ class Rank(commands.Cog):
             color=discord.Color.green()
         )
         embed.set_thumbnail(url=THUMBNAIL)
-        embed.set_footer(text="Feito por !  shotz", icon_url=FOOTER_ICON)
+        embed.set_footer(text="Feito por !  zenitsu", icon_url=FOOTER_ICON)
 
         view = discord.ui.View()
 
         for rtype, label in [("region", "Regiões"), ("country", "Países"),
                              ("player", "Jogadores"), ("alliance", "Aliança")]:
             btn = discord.ui.Button(label=label, style=discord.ButtonStyle.success)
-            btn.callback = lambda i, rt=rtype: self.open_period_menu(i, rt)
+
+            async def callback(i: discord.Interaction, rt=rtype):
+                await self.open_period_menu(i, rt)
+
+            btn.callback = callback
             view.add_item(btn)
+
 
         await interaction.response.send_message(embed=embed, view=view)
 
